@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "name": "opendocker",
   "type": "module",
   "private": false,
@@ -26,7 +26,6 @@
     "@types/dockerode": "^3.3.47",
     "clipboardy": "^5.0.2",
     "dockerode": "^4.0.9",
-    "solid-js": "^1.9.10",
-    "zod": "^4.3.5"
+    "solid-js": "^1.9.10"
   }
 }
