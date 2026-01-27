@@ -4,7 +4,9 @@
   "name": "opendocker",
   "description": "A CLI tool for managing Docker",
   "type": "module",
-  "private": true,
+  "bin": {
+    "opendocker": "bin/opendocker"
+  },
   "files": [
     "bin/",
     "package.json",
