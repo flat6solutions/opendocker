@@ -54,6 +54,7 @@ console.log("\n=== git ===\n")
 await $`git commit -am "release: v${Script.version}"`
 await $`git tag v${Script.version}`
 await $`git push origin HEAD --tags`
+await new Promise((resolve) => setTimeout(resolve, 5_000))
 
 // Create draft GitHub release
 console.log("\n=== github release ===\n")
