@@ -53,7 +53,7 @@ await Bun.file(path.join(mainPkgDir, "package.json")).write(
         [pkg.name]: `./bin/${pkg.name}`,
       },
       scripts: {
-        postinstall: "node ./postinstall.mjs",
+        postinstall: "bun ./postinstall.mjs || node ./postinstall.mjs",
       },
       optionalDependencies,
     },
