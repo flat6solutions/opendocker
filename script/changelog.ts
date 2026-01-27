@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
+import { createOpencode } from "@opencode-ai/sdk"
 
 const team = ["opendocker", "votsuk"] // Add your team GitHub usernames
 
@@ -60,52 +61,79 @@ export async function getCommits(from: string, to: string): Promise<Commit[]> {
   return commits
 }
 
-async function summarizeWithOpenCode(commits: Commit[]): Promise<string[]> {
-  const apiKey = process.env.OPENCODE_API_KEY
-  if (!apiKey) {
-    console.log("No OPENCODE_API_KEY, using raw commit messages")
-    return commits.map((c) => {
-      const attribution = c.author && !team.includes(c.author) ? ` (@${c.author})` : ""
-      return `- ${c.message}${attribution}`
-    })
-  }
-
-  console.log("Summarizing commits with OpenCode...")
-
-  // Use OpenCode API to summarize commits
-  const response = await fetch("https://api.opencode.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      messages: [
-        {
-          role: "user",
-          content: `Summarize these git commits for a changelog. Return a markdown bullet list with concise, user-friendly descriptions. Group similar changes. Do not include commit hashes. Start each line with "- ".
-
-Commits:
-${commits.map((c) => `- ${c.message}`).join("\n")}`,
+async function summarizeCommit(
+  opencode: Awaited<ReturnType<typeof createOpencode>>,
+  message: string
+): Promise<string> {
+  console.log("Summarizing commit:", message)
+  const session = await opencode.client.session.create()
+  const result = await opencode.client.session
+    .prompt({
+      path: { id: session.data!.id },
+      body: {
+        model: { providerID: "opencode", modelID: "claude-sonnet-4-5" },
+        tools: {
+          "*": false,
         },
-      ],
-    }),
-  })
+        parts: [
+          {
+            type: "text",
+            text: `Summarize this commit message for a changelog entry. Return ONLY a single line summary starting with a capital letter. Be concise but specific. If the commit message is already well-written, just clean it up (capitalize, fix typos, proper grammar). Do not include any prefixes like "fix:" or "feat:".
 
-  if (!response.ok) {
-    console.log("OpenCode API error, using raw commits")
-    return commits.map((c) => `- ${c.message}`)
+Commit: ${message}`,
+          },
+        ],
+      },
+      signal: AbortSignal.timeout(120_000),
+    })
+    .then((x) => x.data?.parts?.find((y) => y.type === "text")?.text ?? message)
+  return result.trim()
+}
+
+function getRawChangelog(commits: Commit[]): string[] {
+  const lines: string[] = []
+  for (const commit of commits) {
+    const attribution = commit.author && !team.includes(commit.author) ? ` (@${commit.author})` : ""
+    lines.push(`- ${commit.message}${attribution}`)
   }
+  return lines
+}
 
-  const data = (await response.json()) as any
-  const content = data.choices?.[0]?.message?.content ?? ""
+async function summarizeWithOpenCode(commits: Commit[]): Promise<string[]> {
+  console.log("Summarizing commits with OpenCode SDK...")
 
-  // Extract bullet points from response
-  const lines = content
-    .split("\n")
-    .filter((l: string) => l.trim().startsWith("-"))
-    .map((l: string) => l.trim())
+  const opencode = await createOpencode({ port: 5044 })
+  const lines: string[] = []
+
+  try {
+    // Summarize commits in parallel with max 5 concurrent requests
+    const BATCH_SIZE = 5
+    const summaries: string[] = []
+
+    for (let i = 0; i < commits.length; i += BATCH_SIZE) {
+      const batch = commits.slice(i, i + BATCH_SIZE)
+      const results = await Promise.all(batch.map((c) => summarizeCommit(opencode, c.message)))
+      summaries.push(...results)
+    }
+
+    for (let i = 0; i < commits.length; i++) {
+      const commit = commits[i]!
+      const attribution = commit.author && !team.includes(commit.author) ? ` (@${commit.author})` : ""
+      lines.push(`- ${summaries[i]}${attribution}`)
+    }
+
+    console.log("---- Generated Changelog ----")
+    console.log(lines.join("\n"))
+    console.log("-----------------------------")
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      console.log("Changelog generation timed out, using raw commits")
+      return getRawChangelog(commits)
+    }
+    throw error
+  } finally {
+    opencode.server.close()
+  }
 
   // Add attributions for external contributors
   const contributors = [...new Set(commits.filter((c) => c.author && !team.includes(c.author)).map((c) => c.author))]
@@ -126,7 +154,13 @@ export async function buildNotes(from: string, to: string): Promise<string[]> {
   }
 
   console.log(`Generating changelog for ${commits.length} commits since v${from}`)
-  return summarizeWithOpenCode(commits)
+
+  try {
+    return await summarizeWithOpenCode(commits)
+  } catch (error) {
+    console.log("OpenCode SDK error, falling back to raw commits:", error)
+    return getRawChangelog(commits)
+  }
 }
 
 // CLI entrypoint
