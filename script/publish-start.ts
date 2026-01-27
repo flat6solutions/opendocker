@@ -2,7 +2,6 @@
 
 import { $ } from "bun"
 import { Script } from "../packages/script/src/index.ts"
-
 import { buildNotes, getLatestRelease } from "./changelog"
 
 let notes: string[] = []
