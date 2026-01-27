@@ -164,23 +164,6 @@ for (const item of targets) {
   console.log(`✓ ${name} built successfully`)
 }
 
-// Copy binary for current platform to ./bin/
-console.log("")
-console.log("Copying binary to ./bin/ for current platform...")
-const currentPlatformName = `${pkg.name}-${process.platform === 'win32' ? 'windows' : process.platform}-${process.arch}`
-const currentExeExtension = process.platform === "win32" ? ".exe" : ""
-
-await $`mkdir -p bin`
-
-// Check if the current platform was built
-const currentPlatformBuilt = binaries[currentPlatformName]
-if (currentPlatformBuilt) {
-  await $`cp dist/${currentPlatformName}/bin/opendocker${currentExeExtension} bin/opendocker${currentExeExtension}`
-  console.log(`✓ Binary copied to ./bin/opendocker${currentExeExtension}`)
-} else {
-  console.warn(`⚠ Current platform ${currentPlatformName} was not built (likely using --single on different platform)`)
-}
-
 console.log("")
 console.log("Build complete!")
 console.log(`Built ${Object.keys(binaries).length} platform(s)`)

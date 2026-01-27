@@ -32,7 +32,7 @@ const distDir = new URL("../packages/cli/dist", import.meta.url).pathname
 
 const dirs = await Array.fromAsync(
   new Bun.Glob("opendocker-*").scan({ cwd: distDir, onlyFiles: false })
-).then((arr) => arr.filter((d) => !d.includes("."))) // Filter out archive files
+).then((arr) => arr.filter((d) => !d.includes(".") && d !== "opendocker")) // Filter out archive files and main package
 
 for (const dir of dirs) {
   const fullPath = `${distDir}/${dir}`

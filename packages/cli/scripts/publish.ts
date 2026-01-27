@@ -16,7 +16,7 @@ const version = pkg.version
 
 console.log(`Publishing opendocker@${version}`)
 
-// Get all platform packages from dist/
+// Import binaries from build script (already ran)
 const distDir = path.join(dir, "dist")
 const platformDirs = fs.readdirSync(distDir).filter((name) => {
   const fullPath = path.join(distDir, name)
@@ -26,39 +26,80 @@ const platformDirs = fs.readdirSync(distDir).filter((name) => {
 
 console.log(`Found ${platformDirs.length} platform packages`)
 
-// Update and publish platform-specific packages
+// Build the optionalDependencies map
+const optionalDependencies: Record<string, string> = {}
 for (const platformName of platformDirs) {
-  const platformDir = path.join(distDir, platformName)
-  const platformPkgPath = path.join(platformDir, "package.json")
+  optionalDependencies[platformName] = version
+}
 
-  const platformPkg = JSON.parse(fs.readFileSync(platformPkgPath, "utf-8"))
-  platformPkg.version = version
-  fs.writeFileSync(platformPkgPath, JSON.stringify(platformPkg, null, 2) + "\n")
+// Prepare the main package directory
+const mainPkgDir = path.join(distDir, pkg.name)
+await $`mkdir -p ${mainPkgDir}`
+
+// Copy the bin directory (contains wrapper script)
+await $`cp -r ./bin ${mainPkgDir}/bin`
+
+// Copy the postinstall script
+await $`cp ${path.join(__dirname, "postinstall.mjs")} ${mainPkgDir}/postinstall.mjs`
+
+// Create the main package.json with optionalDependencies
+await Bun.file(path.join(mainPkgDir, "package.json")).write(
+  JSON.stringify(
+    {
+      name: pkg.name,
+      version: version,
+      description: pkg.description || "A CLI tool for managing Docker",
+      bin: {
+        [pkg.name]: `./bin/${pkg.name}`,
+      },
+      scripts: {
+        postinstall: "node ./postinstall.mjs",
+      },
+      optionalDependencies,
+    },
+    null,
+    2,
+  )
+)
+
+console.log("Created main package with optionalDependencies:")
+console.log(JSON.stringify(optionalDependencies, null, 2))
+
+// Publish platform-specific packages first (in parallel)
+const publishTasks = platformDirs.map(async (platformName) => {
+  const platformDir = path.join(distDir, platformName)
+
+  // Ensure binary is executable
+  if (process.platform !== "win32") {
+    await $`chmod -R 755 .`.cwd(platformDir)
+  }
 
   console.log(`Publishing ${platformName}@${version}...`)
 
   try {
     await $`npm publish --access public`.cwd(platformDir)
-    console.log(`  ${platformName}`)
+    console.log(`  ✓ ${platformName}`)
   } catch (error) {
     const errorMessage = String(error)
     if (errorMessage.includes("403") || errorMessage.includes("cannot publish over")) {
-      console.log(`  ${platformName} (already published)`)
+      console.log(`  ✓ ${platformName} (already published)`)
     } else {
       throw error
     }
   }
-}
+})
 
-// Publish main package
-console.log(`\nPublishing opendocker@${version}...`)
+await Promise.all(publishTasks)
+
+// Publish main package last
+console.log(`\nPublishing ${pkg.name}@${version}...`)
 try {
-  await $`npm publish --access public`.cwd(dir)
-  console.log(`opendocker@${version}`)
+  await $`npm publish --access public`.cwd(mainPkgDir)
+  console.log(`✓ ${pkg.name}@${version}`)
 } catch (error) {
   const errorMessage = String(error)
   if (errorMessage.includes("403") || errorMessage.includes("cannot publish over")) {
-    console.log(`opendocker@${version} (already published)`)
+    console.log(`✓ ${pkg.name}@${version} (already published)`)
   } else {
     throw error
   }
