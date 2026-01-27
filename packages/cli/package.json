@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "0.4.0",
+  "version": "0.3.8",
   "name": "opendocker",
   "description": "A CLI tool for managing Docker",
   "type": "module",
