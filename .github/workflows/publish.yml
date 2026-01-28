@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'votsuk/opendocker'
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
   publish-release:
     needs: publish
     if: needs.publish.outputs.tag
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
         with:
