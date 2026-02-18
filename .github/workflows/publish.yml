@@ -25,7 +25,7 @@ permissions:
   packages: write
 
 jobs:
-  publish:
+  version:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'flat6solutions/opendocker'
     steps:
@@ -54,13 +54,39 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
-      - name: Publish
-        id: publish
-        run: ./script/publish-start.ts
+      - name: Version
+        id: version
+        run: ./script/version.ts
         env:
           OPENDOCKER_BUMP: ${{ inputs.bump }}
           OPENDOCKER_VERSION: ${{ inputs.version }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    outputs:
+      release: ${{ steps.version.outputs.release }}
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+
+  publish:
+    needs: version
+    if: needs.version.outputs.tag
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.version.outputs.tag }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Publish
+        run: ./script/publish.ts
+        env:
+          OPENDOCKER_VERSION: ${{ needs.version.outputs.version }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -70,29 +96,3 @@ jobs:
           path: |
             packages/cli/dist/*.tar.gz
             packages/cli/dist/*.zip
-
-    outputs:
-      release: ${{ steps.publish.outputs.release }}
-      tag: ${{ steps.publish.outputs.tag }}
-      version: ${{ steps.publish.outputs.version }}
-
-  publish-release:
-    needs: publish
-    if: needs.publish.outputs.tag
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.publish.outputs.tag }}
-
-      - uses: oven-sh/setup-bun@v2
-
-      - name: Install Dependencies
-        run: bun install
-
-      - name: Undraft Release
-        run: ./script/publish-complete.ts
-        env:
-          OPENDOCKER_VERSION: ${{ needs.publish.outputs.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
