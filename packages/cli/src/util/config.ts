@@ -1,7 +1,4 @@
 import { z } from "zod"
-import type { ThemeColors } from "@/context/theme"
-
-type ThemeColorName = keyof ThemeColors
 
 export const KeybindsConfig = z.object({
   leader: z.string().optional().default("ctrl+x").describe("Leader key for keybind combinations"),
@@ -22,8 +19,3 @@ export const KeybindsConfig = z.object({
 })
 
 export type KeybindsConfig = z.infer<typeof KeybindsConfig>
-
-export type PaneConfig = {
-  title?: string
-  color: ThemeColorName
-}
