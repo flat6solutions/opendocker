@@ -59,14 +59,6 @@ function App() {
     if (keybind.match("theme_mode_toggle", event)) {
       theme.setMode(theme.mode() === "light" ? "dark" : "light")
     }
-
-    if (keybind.match("open_settings", event)) {
-      dialog.replace(() =>
-        <ThemesDialog
-          title="Themes"
-        />
-      )
-    }
   })
 
   function exit() {
