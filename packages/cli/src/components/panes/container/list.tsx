@@ -121,6 +121,7 @@ export default function List() {
   return (
     <Pane
       title="Containers"
+      shortcut="1"
       width="100%"
       flexGrow={active() ? 1 : 0}
       flexShrink={1}

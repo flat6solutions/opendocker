@@ -115,6 +115,7 @@ export default function List() {
     return (
         <Pane
             title="Volumes"
+            shortcut="3"
             width="100%"
             flexGrow={active() ? 1 : 0}
             flexShrink={1}

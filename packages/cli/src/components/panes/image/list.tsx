@@ -117,6 +117,7 @@ export default function List() {
   return (
     <Pane
       title="Images"
+      shortcut="2"
       width="100%"
       flexGrow={active() ? 1 : 0}
       flexShrink={1}

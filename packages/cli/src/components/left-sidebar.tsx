@@ -14,7 +14,7 @@ export default function LeftSidebar() {
   useKeyboard(key => {
     if (dialog.stack.length > 0) return
 
-    if (keybind.match("object_change", key)) {
+    if (keybind.match("cycle_pane", key)) {
       switch (app.activePane) {
         case "containers":
           app.setActivePane("images")
@@ -26,6 +26,18 @@ export default function LeftSidebar() {
           app.setActivePane("containers")
           break
       }
+    }
+
+    if (keybind.match("focus_containers", key)) {
+      app.setActivePane("containers")
+    }
+
+    if (keybind.match("focus_images", key)) {
+      app.setActivePane("images")
+    }
+
+    if (keybind.match("focus_volumes", key)) {
+      app.setActivePane("volumes")
     }
   })
 
