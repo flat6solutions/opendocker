@@ -11,12 +11,14 @@ import {
     Show,
 } from 'solid-js';
 import { Pane } from '@/ui/pane';
-import { Loader } from '@/ui/loader';
 import { useTheme } from '@/context/theme';
 import { useApplication } from '@/context/application';
 import type { Volume } from '@/context/application';
+import { Spinner } from '@/components/spinner';
+import { useKeybind } from '@/context/keybind';
 
 export default function List() {
+    const keybind = useKeybind();
     const app = useApplication();
     const theme = useTheme().theme;
     const [loaded, setLoaded] = createSignal<boolean>(false);
@@ -68,7 +70,7 @@ export default function List() {
         if (app.filtering) return;
         if (app.activePane !== 'volumes') return;
 
-        if (key.name === 'k') {
+        if (keybind.match("up", key)) {
             const index = getSelectedIndex();
             if (index === -1 && app.volumes.length > 0) {
                 app.setActiveVolume(app.volumes[app.volumes.length - 1].name);
@@ -83,7 +85,7 @@ export default function List() {
             app.setActiveVolume(newSelected.name);
         }
 
-        if (key.name === 'j') {
+        if (keybind.match("down", key)) {
             const index = getSelectedIndex();
 
             if (index === -1 && app.volumes.length > 0) {
@@ -118,6 +120,18 @@ export default function List() {
             flexShrink={1}
             borderColor={() => active() ? theme.accent : theme.backgroundPanel}
             active={active()}
+            subtitle={
+                <box flexDirection="row" gap={1}>
+                    <Show when={app.volumes.length === 0 && !loaded() && active()}>
+                        <Spinner />
+                    </Show>
+                    <Show when={loaded() || !active()}>
+                        <text fg={theme.textMuted}>
+                            {app.volumes.length}
+                        </text>
+                    </Show>
+                </box>
+            }
         >
             <Show when={active()}>
                 <Switch>
@@ -172,15 +186,7 @@ export default function List() {
                         <box flexDirection="column" width="100%">
                             <box paddingLeft={1} paddingRight={1} paddingBottom={1}>
                                 <text fg={theme.textMuted}>No volumes found</text>
-                                <text fg={theme.textMuted}>
-                                    Try: docker volume create my-volume to get started
-                                </text>
                             </box>
-                        </box>
-                    </Match>
-                    <Match when={app.volumes.length === 0 && !loaded()}>
-                        <box width="100%" paddingLeft={1} paddingRight={1}>
-                            <Loader />
                         </box>
                     </Match>
                 </Switch>

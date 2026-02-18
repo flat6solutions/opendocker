@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "name": "opendocker",
   "description": "A CLI tool for managing Docker",
   "type": "module",
@@ -17,8 +17,8 @@
     "@types/bun": "latest"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.74",
-    "@opentui/solid": "^0.1.74",
+    "@opentui/core": "^0.1.79",
+    "@opentui/solid": "^0.1.79",
     "@types/dockerode": "^3.3.47",
     "clipboardy": "^5.0.2",
     "dockerode": "^4.0.9",

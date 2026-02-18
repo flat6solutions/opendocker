@@ -1,62 +1,85 @@
-import { RGBA, TextAttributes } from '@opentui/core';
-import type { BoxProps } from '@opentui/solid';
-import { createEffect, createSignal, splitProps, type Accessor, type JSX } from 'solid-js';
-import { SplitBorder } from '@/components/border';
-import { useTheme } from '@/context/theme';
+import { RGBA, TextAttributes } from "@opentui/core"
+import type { BoxProps } from "@opentui/solid"
+import { createEffect, createSignal, Show, splitProps, type Accessor, type JSX } from "solid-js"
+import { SplitBorder } from "@/components/border"
+import { useTheme } from "@/context/theme"
 
-interface PaneProps extends Omit<BoxProps, 'borderColor'> {
-    children?: JSX.Element;
-    title?: string;
-    borderColor?: Accessor<RGBA> | string | RGBA;
-    active?: boolean;
+interface PaneProps extends Omit<BoxProps, "borderColor"> {
+  children?: JSX.Element
+  title?: string
+  subtitle?: JSX.Element
+  borderColor?: Accessor<RGBA | undefined> | string | RGBA
+  active?: boolean
 }
 
 export function Pane(props: PaneProps) {
-    const [local, others] = splitProps(props, ['children', 'title', 'borderColor', 'active']);
-    const theme = useTheme();
-    const colors = theme.theme;
-    const [bg, setBg] = createSignal(theme.mode() === 'dark' ? theme.theme.backgroundPanel : theme.theme.backgroundElement);
+  const [local, others] = splitProps(props, ["children", "title", "subtitle", "borderColor", "active"])
+  const theme = useTheme()
+  const colors = theme.theme
+  const [bg, setBg] = createSignal(theme.mode() === "dark" ? theme.theme.backgroundPanel : theme.theme.backgroundElement)
 
-    function getBorderColor() {
-        if (!local.borderColor) return bg();
-        if (typeof local.borderColor === 'function') return local.borderColor();
-        return local.borderColor;
+  function getBorderColor() {
+    if (!local.borderColor) return bg()
+    if (typeof local.borderColor === "function") {
+      if (local.borderColor() === undefined) {
+        return bg()
+      }
+
+      return local.borderColor()
     }
+    return local.borderColor
+  }
 
-    createEffect(() => {
-        setBg(theme.mode() === 'dark' ? theme.theme.backgroundPanel : theme.theme.backgroundElement);
-    });
+  createEffect(() => {
+    setBg(theme.mode() === "dark" ? theme.theme.backgroundPanel : theme.theme.backgroundElement)
+  })
 
-    return (
-        <box
-            border={['left']}
-            customBorderChars={SplitBorder.customBorderChars}
-            borderColor={getBorderColor()}
-            {...others}
-            {...(local.active === false ? { height: 3 } : {})}
-        >
+  return (
+    <box
+      border={["left"]}
+      customBorderChars={SplitBorder.customBorderChars}
+      borderColor={getBorderColor()}
+      {...others}
+      {...(local.active === false ? { height: 3 } : {})}
+    >
+      <box
+        backgroundColor={bg()}
+        width="100%"
+        height={local.active !== undefined ? "100%" : undefined}
+        paddingTop={1}
+        paddingBottom={1}
+        paddingLeft={1}
+        paddingRight={1}
+      >
+        {local.title && (
+          <>
             <box
-                backgroundColor={bg()}
-                width="100%"
-                height={local.active !== undefined ? "100%" : undefined}
-                paddingTop={1}
-                paddingBottom={1}
-                paddingLeft={1}
-                paddingRight={1}
+              flexDirection="row"
+              alignItems="center"
+              justifyContent="space-between"
+              width="100%"
             >
-                {local.title && (
-                    <text
-                        attributes={TextAttributes.BOLD}
-                        marginBottom={local.active ? 1 : 0}
-                        marginLeft={1}
-                        marginRight={1}
-                        fg={colors.text}
-                    >
-                        {local.title}
-                    </text>
-                )}
-                {local.children && local.children}
+              <text
+                attributes={TextAttributes.BOLD}
+                marginBottom={local.active ? 1 : 0}
+                marginLeft={1}
+                fg={colors.text}
+              >
+                {local.title}
+              </text>
+              <Show when={local.subtitle}>
+                <box
+                  marginBottom={local.active ? 1 : 0}
+                  marginRight={1}
+                >
+                  {local.subtitle}
+                </box>
+              </Show>
             </box>
-        </box>
-    );
+          </>
+        )}
+        {local.children && local.children}
+      </box>
+    </box>
+  )
 }

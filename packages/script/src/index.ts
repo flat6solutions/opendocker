@@ -1,5 +1,3 @@
-import { $ } from "bun"
-
 const env = {
   OPENDOCKER_BUMP: process.env["OPENDOCKER_BUMP"],
   OPENDOCKER_VERSION: process.env["OPENDOCKER_VERSION"],
