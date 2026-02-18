@@ -1,176 +1,185 @@
-import { TextAttributes } from '@opentui/core';
-import { useKeyboard } from '@opentui/solid';
+import { TextAttributes } from "@opentui/core"
+import { useKeyboard } from "@opentui/solid"
 import {
-    createEffect,
-    createSignal,
-    For,
-    Match,
-    onMount,
-    Switch,
-    onCleanup,
-    Show,
-} from 'solid-js';
-import { useApplication } from '@/context/application';
-import type { Image } from '@/context/application';
-import { Pane } from '@/ui/pane';
-import { useTheme } from '@/context/theme';
-import { Loader } from '@/ui/loader';
+  createEffect,
+  createSignal,
+  For,
+  Match,
+  onMount,
+  Switch,
+  onCleanup,
+  Show,
+} from "solid-js"
+import { useApplication } from "@/context/application"
+import type { Image } from "@/context/application"
+import { Pane } from "@/ui/pane"
+import { useTheme } from "@/context/theme"
+import { Spinner } from "@/components/spinner"
+import { useKeybind } from "@/context/keybind"
+import { useDialog } from "@/ui/dialog"
 
 export default function List() {
-    const app = useApplication();
-    const theme = useTheme().theme;
-    const [loaded, setLoaded] = createSignal<boolean>(false);
-    const [active, setActive] = createSignal<boolean>(false);
+  const keybind = useKeybind()
+  const app = useApplication()
+  const dialog = useDialog()
+  const theme = useTheme().theme
+  const [loaded, setLoaded] = createSignal<boolean>(false)
+  const [active, setActive] = createSignal<boolean>(false)
 
-    function validateActiveImage(images: Array<Image>, activeId: string | null) {
-        if (!activeId) return images[0]?.id;
-        const exists = images.find((i: Image) => i.id === activeId);
-        return exists ? activeId : images[0]?.id;
+  function validateActiveImage(images: Array<Image>, activeId: string | null) {
+    if (!activeId) return images[0]?.id
+    const exists = images.find((i: Image) => i.id === activeId)
+    return exists ? activeId : images[0]?.id
+  }
+
+  async function imagePulse() {
+    const d = app.docker
+    if (!d) return
+
+    const fetchedImages = await d?.streamImages() || []
+    app.setImages(fetchedImages)
+
+    const validActiveId = validateActiveImage(fetchedImages, app.activeImage)
+    if (validActiveId !== app.activeImage) {
+      app.setActiveImage(validActiveId)
     }
 
-    async function imagePulse() {
-        const d = app.docker;
-        if (!d) return;
+    setLoaded(true)
+  }
 
-        const fetchedImages = await d?.streamImages() || [];
-        app.setImages(fetchedImages);
+  onMount(() => {
+    imagePulse()
 
-        const validActiveId = validateActiveImage(fetchedImages, app.activeImage);
-        if (validActiveId !== app.activeImage) {
-            app.setActiveImage(validActiveId);
-        }
+    const intervalId = setInterval(() => {
+      imagePulse()
+    }, 1000)
 
-        setLoaded(true);
+    onCleanup(() => {
+      clearInterval(intervalId)
+    })
+  })
+
+  function getSelectedIndex() {
+    if (!app.activeImage) {
+      return -1
     }
 
-    onMount(() => {
-        imagePulse();
+    return app.images.findIndex(i => i.id === app.activeImage)
+  }
 
-        const intervalId = setInterval(() => {
-            imagePulse();
-        }, 1000);
+  useKeyboard(key => {
+    if (app.filtering) return
+    if (app.activePane !== "images") return
+    if (dialog.stack.length > 0) return
 
-        onCleanup(() => {
-            clearInterval(intervalId);
-        });
-    });
+    if (keybind.match("up", key)) {
+      const index = getSelectedIndex()
+      if (index === -1 && app.images.length > 0) {
+        app.setActiveImage(app.images[app.images.length - 1].id)
+        return
+      }
 
-    function getSelectedIndex() {
-        if (!app.activeImage) {
-            return -1;
-        }
+      if (index <= 0) {
+        return
+      }
 
-        return app.images.findIndex(i => i.id === app.activeImage);
+      const newSelected = app.images[index - 1]
+      app.setActiveImage(newSelected.id)
     }
 
-    useKeyboard(key => {
-        if (app.filtering) return;
-        if (app.activePane !== 'images') return;
+    if (keybind.match("down", key)) {
+      const index = getSelectedIndex()
 
-        if (key.name === 'k') {
-            const index = getSelectedIndex();
-            if (index === -1 && app.images.length > 0) {
-                app.setActiveImage(app.images[app.images.length - 1].id);
-                return;
-            }
+      if (index === -1 && app.images.length > 0) {
+        app.setActiveImage(app.images[0].id)
+        return
+      }
 
-            if (index <= 0) {
-                return;
-            }
+      if (index >= app.images.length - 1) {
+        return
+      }
 
-            const newSelected = app.images[index - 1];
-            app.setActiveImage(newSelected.id);
-        }
+      const newSelected = app.images[index + 1]
+      app.setActiveImage(newSelected.id)
+    }
+  })
 
-        if (key.name === 'j') {
-            const index = getSelectedIndex();
+  createEffect(() => {
+    if (!app.activeImage && app.images.length > 0) {
+      app.setActiveImage(app.images[0].id)
+    }
+  })
 
-            if (index === -1 && app.images.length > 0) {
-                app.setActiveImage(app.images[0].id);
-                return;
-            }
+  createEffect(() => {
+    setActive(app.activePane === "images")
+  })
 
-            if (index >= app.images.length - 1) {
-                return;
-            }
-
-            const newSelected = app.images[index + 1];
-            app.setActiveImage(newSelected.id);
-        }
-    });
-
-    createEffect(() => {
-        if (!app.activeImage && app.images.length > 0) {
-            app.setActiveImage(app.images[0].id);
-        }
-    });
-
-    createEffect(() => {
-        setActive(app.activePane === 'images');
-    });
-
-    return (
-        <Pane
-            title="Images"
-            width="100%"
-            flexGrow={active() ? 1 : 0}
-            flexShrink={1}
-            borderColor={() => active() ? theme.success : theme.backgroundPanel}
-            active={active()}
-        >
-            <Show when={active()}>
-                <Switch>
-                    <Match when={app.images.length > 0}>
-                        <box flexDirection="column" width="100%">
-                            <For each={app.images}>
-                                {(image: Image) => {
-                                    const isActive = () => app.activeImage === image.id;
-                                    return (
-                                        <box
-                                            backgroundColor={isActive() ? theme.success : undefined}
-                                            flexDirection="row"
-                                            gap={1}
-                                            paddingLeft={1}
-                                            paddingRight={1}
-                                        >
-                                            <text
-                                                fg={
-                                                    isActive()
-                                                        ? theme.backgroundPanel
-                                                        : theme.textMuted
-                                                }
-                                                attributes={
-                                                    isActive() ? TextAttributes.BOLD : undefined
-                                                }
-                                                flexShrink={1}
-                                                flexGrow={1}
-                                                wrapMode='none'
-                                            >
-                                                {image.name}
-                                            </text>
-                                        </box>
-                                    );
-                                }}
-                            </For>
-                        </box>
-                    </Match>
-                    <Match when={app.images.length === 0 && loaded()}>
-                        <box flexDirection="column" width="100%">
-                            <box paddingLeft={1} paddingRight={1} paddingBottom={1}>
-                                <text fg={theme.textMuted}>No images found</text>
-                                <text fg={theme.textMuted}>
-                                    Try: docker pull hello-world to get started
-                                </text>
-                            </box>
-                        </box>
-                    </Match>
-                    <Match when={app.images.length === 0 && !loaded()}>
-                        <box width="100%" paddingLeft={1} paddingRight={1}>
-                            <Loader />
-                        </box>
-                    </Match>
-                </Switch>
-            </Show>
-        </Pane>
-    );
+  return (
+    <Pane
+      title="Images"
+      width="100%"
+      flexGrow={active() ? 1 : 0}
+      flexShrink={1}
+      borderColor={() => active() ? theme.success : theme.backgroundPanel}
+      active={active()}
+      subtitle={
+        <box flexDirection="row" gap={1}>
+          <Show when={app.images.length === 0 && !loaded() && active()}>
+            <Spinner />
+          </Show>
+          <Show when={loaded() || !active()}>
+            <text fg={theme.textMuted}>
+              {app.images.length}
+            </text>
+          </Show>
+        </box>
+      }
+    >
+      <Show when={active()}>
+        <Switch>
+          <Match when={app.images.length > 0}>
+            <box flexDirection="column" width="100%">
+              <For each={app.images}>
+                {(image: Image) => {
+                  const isActive = () => app.activeImage === image.id
+                  return (
+                    <box
+                      backgroundColor={isActive() ? theme.success : undefined}
+                      flexDirection="row"
+                      gap={1}
+                      paddingLeft={1}
+                      paddingRight={1}
+                    >
+                      <text
+                        fg={
+                          isActive()
+                            ? theme.backgroundPanel
+                            : theme.textMuted
+                        }
+                        attributes={
+                          isActive() ? TextAttributes.BOLD : undefined
+                        }
+                        flexShrink={1}
+                        flexGrow={1}
+                        wrapMode="none"
+                      >
+                        {image.name}
+                      </text>
+                    </box>
+                  )
+                }}
+              </For>
+            </box>
+          </Match>
+          <Match when={app.images.length === 0 && loaded()}>
+            <box flexDirection="column" width="100%">
+              <box paddingLeft={1} paddingRight={1} paddingBottom={1}>
+                <text fg={theme.textMuted}>No images found</text>
+              </box>
+            </box>
+          </Match>
+        </Switch>
+      </Show>
+    </Pane>
+  )
 }
