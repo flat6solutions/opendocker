@@ -5,13 +5,17 @@ import { createOpencode } from "@opencode-ai/sdk"
 
 const repo = process.env.GITHUB_REPOSITORY ?? "flat6solutions/opendocker"
 
+type Release = {
+  tag_name: string
+}
+
 export async function getLatestRelease(): Promise<string> {
   return fetch(`https://api.github.com/repos/${repo}/releases/latest`)
     .then((res) => {
       if (!res.ok) throw new Error(res.statusText)
-      return res.json()
+      return res.json() as Promise<Release>
     })
-    .then((data: any) => data.tag_name.replace(/^v/, ""))
+    .then((data) => data.tag_name.replace(/^v/, ""))
     .catch(() => "0.0.0")
 }
 
@@ -19,6 +23,11 @@ type Commit = {
   hash: string
   message: string
 }
+
+const VERSION_ONLY_RE = /^v?\d+(?:\.\d+)*$/i
+const MERGE_COMMIT_RE = /^(merge pull request|merge branch)/i
+const DISALLOWED_SUMMARY_RE = /(cannot access|need to see|provide the full commit message|without seeing|i can only|since i cannot|i don't have access|git history)/i
+
 
 export async function getCommits(from: string, to: string): Promise<Commit[]> {
   const fromRef = from === "0.0.0" ? "" : from.startsWith("v") ? from : `v${from}`
@@ -29,7 +38,6 @@ export async function getCommits(from: string, to: string): Promise<Commit[]> {
     if (fromRef) {
       compare = await $`gh api "/repos/${repo}/compare/${fromRef}...${toRef}" --jq '.commits[] | {sha: .sha, message: .commit.message}'`.text()
     } else {
-      // First release - get all commits
       compare = await $`gh api "/repos/${repo}/commits?per_page=100" --jq '.[] | {sha: .sha, message: .commit.message}'`.text()
     }
   } catch {
@@ -37,32 +45,70 @@ export async function getCommits(from: string, to: string): Promise<Commit[]> {
     return []
   }
 
-  const commits: Commit[] = []
-
+  const commitData = new Map<string, { message: string }>()
   for (const line of compare.split("\n").filter(Boolean)) {
     try {
       const data = JSON.parse(line) as { sha: string; message: string }
-      const message = data.message.split("\n")[0] ?? ""
-
-      // Skip certain commit types
-      if (message.match(/^(release:|chore:|ci:|test:)/i)) continue
-
-      commits.push({
-        hash: data.sha.slice(0, 7),
-        message,
-      })
+      commitData.set(data.sha, { message: data.message.split("\n")[0] ?? "" })
     } catch {
       // Skip malformed JSON lines
     }
   }
 
+  let log = ""
+  try {
+    log = await $`git log ${fromRef ? `${fromRef}..${toRef}` : toRef} --oneline --format="%H" -- packages/cli packages/script script .github`.text()
+  } catch {
+    console.log("Could not fetch git log")
+    return []
+  }
+
+  const hashes = log.split("\n").filter(Boolean)
+  const commits: Commit[] = []
+
+  for (const hash of hashes) {
+    const data = commitData.get(hash)
+    if (!data) continue
+
+    const message = data.message
+    if (message.match(/^(release:|chore:|ci:|test:|ignore:)/i)) continue
+    if (MERGE_COMMIT_RE.test(message)) continue
+
+    commits.push({
+      hash: hash.slice(0, 7),
+      message,
+    })
+  }
+
   return commits
+}
+
+function normalizeSummary(summary: string, fallback: string): string {
+  const trimmed = summary.trim()
+  if (!trimmed || trimmed.includes("\n") || DISALLOWED_SUMMARY_RE.test(trimmed)) {
+    return fallback
+  }
+  return trimmed
+}
+
+function simpleSummary(message: string): string | null {
+  const firstLine = message.split("\n")[0]?.trim() ?? ""
+  if (!firstLine) return null
+  if (VERSION_ONLY_RE.test(firstLine)) {
+    return `Release ${firstLine.toLowerCase().startsWith("v") ? firstLine : `v${firstLine}`}`
+  }
+  const capitalized = firstLine[0]?.toUpperCase() + firstLine.slice(1)
+  return capitalized
 }
 
 async function summarizeCommit(
   opencode: Awaited<ReturnType<typeof createOpencode>>,
   message: string
 ): Promise<string> {
+  const fallback = simpleSummary(message) ?? message
+  if (VERSION_ONLY_RE.test(message.trim())) {
+    return fallback
+  }
   console.log("Summarizing commit:", message)
   const session = await opencode.client.session.create()
   const result = await opencode.client.session
@@ -76,7 +122,7 @@ async function summarizeCommit(
         parts: [
           {
             type: "text",
-            text: `Summarize this commit message for a changelog entry. Return ONLY a single line summary starting with a capital letter. Be concise but specific. If the commit message is already well-written, just clean it up (capitalize, fix typos, proper grammar). Do not include any prefixes like "fix:" or "feat:".
+            text: `Summarize this commit message for a changelog entry. Use ONLY the message text provided. Return a single line summary starting with a capital letter. Be concise but specific. If the message is already well-written, just clean it up (capitalize, fix typos, proper grammar). Do not include any prefixes like "fix:" or "feat:". Do not mention missing context or ask questions.
 
 
 Commit: ${message}`,
@@ -86,15 +132,11 @@ Commit: ${message}`,
       signal: AbortSignal.timeout(120_000),
     })
     .then((x) => x.data?.parts?.find((y) => y.type === "text")?.text ?? message)
-  return result.trim()
+  return normalizeSummary(result, fallback)
 }
 
 function getRawChangelog(commits: Commit[]): string[] {
-  const lines: string[] = []
-  for (const commit of commits) {
-    lines.push(`- ${commit.message}`)
-  }
-  return lines
+  return commits.map((commit) => `- ${commit.message}`)
 }
 
 async function summarizeWithOpenCode(commits: Commit[]): Promise<string[]> {
@@ -117,7 +159,10 @@ async function summarizeWithOpenCode(commits: Commit[]): Promise<string[]> {
     console.log(`Summarized ${summaries.length} commits in ${Math.round((Bun.nanoseconds() - summarizeStart) / 1_000_000)}ms`)
 
     for (let i = 0; i < commits.length; i++) {
-      lines.push(`- ${summaries[i]}`)
+      const commit = commits[i]
+      if (!commit) continue
+      const entry = `- ${summaries[i]}`
+      lines.push(entry)
     }
 
     console.log("---- Generated Changelog ----")
