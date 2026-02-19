@@ -9,18 +9,6 @@ console.log("=== version ===\n")
 const previous = await getLatestRelease()
 const notes = await buildNotes(previous, "HEAD")
 
-const pkgPath = new URL("../packages/cli/package.json", import.meta.url).pathname
-const pkg = await Bun.file(pkgPath).json()
-pkg.version = Script.version
-await Bun.file(pkgPath).write(JSON.stringify(pkg, null, 2) + "\n")
-console.log(`Updated version to ${Script.version}`)
-
-console.log("\n=== git ===\n")
-await $`git commit -am "release: v${Script.version}"`
-await $`git tag v${Script.version}`
-await $`git push origin HEAD --tags`
-await new Promise((resolve) => setTimeout(resolve, 5_000))
-
 console.log("\n=== github release draft ===\n")
 const notesContent = notes.join("\n") || "No notable changes"
 const dir = process.env.RUNNER_TEMP ?? "/tmp"
