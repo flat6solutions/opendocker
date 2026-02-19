@@ -1,5 +1,5 @@
 import { useKeyboard, useRenderer } from "@opentui/solid"
-import { ErrorBoundary } from "solid-js"
+import { ErrorBoundary, onMount } from "solid-js"
 import { ErrorComponent } from "@/components/error-component"
 import { BaseLayout } from "@/layouts/base-layout"
 import LeftSidebar from "./components/left-sidebar"
@@ -11,7 +11,6 @@ import { KeybindProvider, useKeybind } from "./context/keybind"
 import { ThemeProvider, useTheme } from "./context/theme"
 import { KVProvider } from "./context/kv"
 import { DialogProvider, useDialog } from "./ui/dialog"
-import ThemesDialog from "./components/dialogs/themes"
 
 export function tui() {
   return (
@@ -66,6 +65,20 @@ function App() {
     renderer.destroy()
     process.exit(0)
   }
+
+  async function checkForUpdates() {
+    const version = typeof OPENDOCKER_VERSION !== "undefined" ? OPENDOCKER_VERSION : "local"
+    if (version === "local") return
+    console.log("OpenDocker version", version)
+  }
+
+  function setup() {
+    checkForUpdates()
+  }
+
+  onMount(() => {
+    setup()
+  })
 
   return (
     <box
