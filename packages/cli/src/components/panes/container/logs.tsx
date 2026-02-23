@@ -15,10 +15,9 @@ export default function Logs() {
   const [paused, setPaused] = createSignal<boolean>(false)
   const [scroll, setScroll] = createSignal<ScrollBoxRenderable>()
   const logSyntaxStyle = SyntaxStyle.create()
-  const [width, setWidth] = createSignal<number>(0)
 
   useKeyboard(key => {
-    if (app.activePane !== "container") {
+    if (app.activePane !== "containers" && app.activePane !== "filter") {
       return
     }
 
@@ -35,14 +34,6 @@ export default function Logs() {
         scrollBox.stickyScroll = true
       }
       setPaused(false)
-    }
-  })
-
-  createEffect(() => {
-    logs()
-    const scrollBox = scroll()
-    if (scrollBox) {
-      setWidth(scrollBox.viewport.width)
     }
   })
 
@@ -128,7 +119,6 @@ export default function Logs() {
                 content={logs()}
                 syntaxStyle={logSyntaxStyle}
                 streaming={false}
-                width={width()}
                 fg={theme.textMuted}
               />
             </scrollbox>
