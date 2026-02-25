@@ -106,7 +106,7 @@ export default function Logs() {
         gap={1}
       >
         <Switch>
-          <Match when={app.activeContainer}>
+          <Match when={app.activeContainer && logs().length > 0}>
             <scrollbox
               ref={(r: ScrollBoxRenderable) => setScroll(r)}
               scrollY={true}
@@ -134,6 +134,11 @@ export default function Logs() {
           <Match when={!app.activeContainer && app.containers.length === 0}>
             <box height="100%" width="100%" paddingLeft={1} paddingRight={1}>
               <text fg={theme.textMuted}>No container selected</text>
+            </box>
+          </Match>
+          <Match when={app.activeContainer && app.filters[app.activeContainer] && logs().length === 0}>
+            <box height="100%" width="100%" paddingLeft={1} paddingRight={1}>
+              <text fg={theme.textMuted}>No matching logs for "{app.filters[app.activeContainer!]}"</text>
             </box>
           </Match>
         </Switch>
