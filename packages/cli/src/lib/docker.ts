@@ -1,14 +1,7 @@
 import http from "http"
-import type { Container, Image, Volume } from "@/context/application"
+import type { Image, Volume } from "@/context/application"
 
 const DEFAULT_SOCKET = "/var/run/docker.sock"
-
-interface DockerContainer {
-  Id: string
-  Names: string[]
-  State: string
-  Status: string
-}
 
 interface DockerImage {
   Id: string
@@ -99,23 +92,6 @@ export class Docker {
       req.on("error", reject)
       req.end()
     })
-  }
-
-  public async streamContainers(): Promise<Array<Container>> {
-    const containers: DockerContainer[] = await this.request("/containers/json?all=1")
-
-    return containers
-      .map((container: DockerContainer) => ({
-        id: container.Id,
-        name: container.Names[0].replace("/", ""),
-        state: container.State,
-        status: container.Status,
-      }))
-      .sort((a, b) => {
-        if (a.state === "running" && b.state !== "running") return -1
-        if (b.state === "running" && a.state !== "running") return 1
-        return a.name.localeCompare(b.name)
-      })
   }
 
   public async streamImages(): Promise<Array<Image>> {

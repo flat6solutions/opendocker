@@ -15,44 +15,30 @@ import type { Container } from "@/context/application"
 import { Pane } from "@/ui/pane"
 import { getColorForContainerState } from "@/util/colors"
 import { useTheme } from "@/context/theme"
-import { Spinner } from "@/components/spinner"
 import { useKeybind } from "@/context/keybind"
+import { DockerV2 } from "@/lib/docker-v2"
 
 export default function List() {
   const keybind = useKeybind()
   const app = useApplication()
-  const [selectedId, setSelectedId] = createSignal<string | null>()
-  const [loaded, setLoaded] = createSignal<boolean>(false)
   const [active, setActive] = createSignal<boolean>(false)
   const maxStateLength = () => Math.max(...app.containers.map(c => c.state.length), 0)
   const theme = useTheme().theme
+  const [selected, setSelected] = createSignal(0)
 
-  function validateActiveContainer(containers: Array<Container>, activeId: string | null) {
-    if (!activeId) return containers[0]?.id 
-    const exists = containers.find((c: Container) => c.id === activeId)
-    return exists? activeId : containers[0]?.id
-  }
-
-  async function containerPulse() {
-    const d = app.docker
-    if (!d) return
-
-    const fetchedContainers = await d?.streamContainers() || []
-    app.setContainers(fetchedContainers)
-
-    const validActiveId = validateActiveContainer(fetchedContainers, app.activeContainer)
-    if (validActiveId !== app.activeContainer) {
-      app.setActiveContainer(validActiveId)
+  async function setup() {
+    const c = await DockerV2.getContainers()
+    app.setContainers(c)
+    if (!selected()) {
+      setSelected(0)
     }
-
-    setLoaded(true)
   }
 
   onMount(() => {
-    containerPulse()
+    setup()
 
     const intervalId = setInterval(() => {
-      containerPulse()
+      setup()
     }, 1000)
 
     onCleanup(() => {
@@ -105,10 +91,6 @@ export default function List() {
   })
 
   createEffect(() => {
-    setSelectedId(app.activeContainer)
-  })
-
-  createEffect(() => {
     if (!app.activeContainer && app.containers.length > 0) {
       app.setActiveContainer(app.containers[0].id)
     }
@@ -129,14 +111,9 @@ export default function List() {
       active={active()}
       subtitle={
         <box flexDirection="row" gap={1} alignItems="center">
-          <Show when={app.containers.length === 0 && !loaded() && active()}>
-            <Spinner />
-          </Show>
-          <Show when={loaded() || !active()}>
-            <text fg={theme.textMuted}>
-              {app.containers.length}
-            </text>
-          </Show>
+          <text fg={theme.textMuted}>
+            {app.containers.length}
+          </text>
         </box>
       }
     >
@@ -189,7 +166,7 @@ export default function List() {
               </For>
             </box>
           </Match>
-          <Match when={app.containers.length === 0 && loaded()}>
+          <Match when={app.containers.length === 0}>
             <box flexDirection="column" width="100%">
               <box paddingLeft={1} paddingRight={1} paddingBottom={1}>
                 <text fg={theme.textMuted}>No containers found</text>

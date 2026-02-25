@@ -14,8 +14,5 @@
   ],
   "devDependencies": {
     "@opencode-ai/sdk": "latest"
-  },
-  "dependencies": {
-    "opentui-spinner": "^0.0.6"
   }
 }

@@ -17,8 +17,9 @@
     "@types/bun": "latest"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.79",
-    "@opentui/solid": "^0.1.79",
+    "@opentui/core": "^0.1.82",
+    "@opentui/solid": "^0.1.82",
+    "opentui-spinner": "^0.0.6",
     "@types/dockerode": "^3.3.47",
     "clipboardy": "^5.0.2",
     "dockerode": "^4.0.9",
