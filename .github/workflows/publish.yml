@@ -40,10 +40,11 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Setup Git Identity
-        run: |
-          git config --global user.email "kustovsteven@gmail.com"
-          git config --global user.name "opendocker"
+      - uses: ./.github/actions/setup-git-committer
+        id: committer
+        with:
+          opendocker-app-id: ${{ secrets.OPENDOCKER_APP_ID }}
+          opendocker-app-secret: ${{ secrets.OPENDOCKER_APP_SECRET }}
 
       - name: Install Dependencies
         run: bun install
@@ -52,6 +53,7 @@ jobs:
         id: version
         run: ./script/version.ts
         env:
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
           OPENDOCKER_BUMP: ${{ inputs.bump }}
           OPENDOCKER_VERSION: ${{ inputs.version }}
           GH_REPO: ${{ github.repository }}
