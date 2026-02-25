@@ -24,6 +24,8 @@ runs:
         app-id: ${{ inputs.opendocker-app-id }}
         private-key: ${{ inputs.opendocker-app-secret }}
         owner: ${{ github.repository_owner }}
+        repositories: |
+          opendocker
 
     - name: Configure git user
       run: |
