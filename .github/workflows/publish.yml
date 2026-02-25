@@ -1,32 +1,28 @@
 name: publish
 run-name: "${{ format('release {0}', inputs.bump) }}"
 
-
 on:
   workflow_dispatch:
     inputs:
       bump:
         description: "Bump major, minor, or patch"
-        required: true
+        required: false
         type: choice
         options:
-          - patch
-          - minor
           - major
+          - minor
+          - patch
       version:
         description: "Override version (optional)"
         required: false
         type: string
 
-
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
-
 
 permissions:
   id-token: write
   contents: write
   packages: write
-
 
 jobs:
   version:
@@ -37,33 +33,20 @@ jobs:
         with:
           fetch-depth: 0
 
-
-      - run: git fetch --force --tags
-
-
       - uses: oven-sh/setup-bun@v2
-
 
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-
       - name: Setup Git Identity
         run: |
           git config --global user.email "kustovsteven@gmail.com"
           git config --global user.name "opendocker"
 
-
-      - name: Install opencode
-        if: inputs.bump || inputs.version
-        run: bun install -g opencode-ai@latest
-
-
       - name: Install Dependencies
         run: bun install
-
 
       - name: Version
         id: version
@@ -71,50 +54,87 @@ jobs:
         env:
           OPENDOCKER_BUMP: ${{ inputs.bump }}
           OPENDOCKER_VERSION: ${{ inputs.version }}
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          GH_REPO: ${{ github.repository }}
 
     outputs:
+      version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
       tag: ${{ steps.version.outputs.tag }}
-      version: ${{ steps.version.outputs.version }}
+      repo: ${{ steps.version.outputs.repo }}
 
-
-  publish:
+  build-cli:
     needs: version
-    if: needs.version.outputs.tag
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.repository == 'flat6solutions/opendocker'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-
       - uses: oven-sh/setup-bun@v2
-
 
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build
+        id: build
+        run: |
+          ./packages/cli/scripts/build.ts --all
+        env:
+          OPENDOCKER_VERSION: ${{ needs.version.outputs.version }}
+          OPENDOCKER_RELEASE: "true"
+          GH_REPO: ${{ needs.version.outputs.repo }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opendocker-cli
+          path: packages/cli/dist
+
+    outputs:
+      version: ${{ needs.version.outputs.version }}
+
+  publish:
+    needs:
+      - version
+      - build-cli
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.repository == 'flat6solutions/opendocker'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Setup Git Identity
+        run: |
+          git config --global user.email "kustovsteven@gmail.com"
+          git config --global user.name "opendocker"
 
       - name: Install Dependencies
         run: bun install
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: opendocker-cli
+          path: packages/cli/dist
 
       - name: Publish
         run: ./script/publish.ts
         env:
           OPENDOCKER_VERSION: ${{ needs.version.outputs.version }}
+          OPENDOCKER_RELEASE: "true"
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: opendocker-binaries
-          path: |
-            packages/cli/dist/*.tar.gz
-            packages/cli/dist/*.zip
+          GH_REPO: ${{ needs.version.outputs.repo }}

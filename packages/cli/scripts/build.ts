@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 
-import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
-import path from "path"
-import fs from "fs"
 import { $ } from "bun"
+import fs from "fs"
+import path from "path"
 import { fileURLToPath } from "url"
+import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
+import { Script } from "../../script/src/index.ts"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -14,7 +15,8 @@ process.chdir(dir)
 
 import pkg from "../package.json"
 
-const singleFlag = process.argv.includes("--single")
+const singleFlag = process.argv.includes("--single") || (!!process.env.CI && !process.argv.includes("--all"))
+const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
 
 const allTargets: {
@@ -77,29 +79,33 @@ const allTargets: {
 ]
 
 const targets = singleFlag
-  ? allTargets.filter((item) => item.os === process.platform && item.arch === process.arch)
-  : allTargets
+  ? allTargets.filter((item) => {
+      if (item.os !== process.platform || item.arch !== process.arch) {
+        return false
+      }
 
-console.log(`Building OpenDocker v${pkg.version}`)
-console.log(`Target platforms: ${targets.length}`)
-console.log("")
+      if (item.avx2 === false) {
+        return baselineFlag
+      }
+
+      if (item.abi !== undefined) {
+        return false
+      }
+
+      return true
+    })
+  : allTargets
 
 await $`rm -rf dist`
 
 const binaries: Record<string, string> = {}
-
-// Install platform-specific dependencies if needed
 if (!skipInstall) {
-  console.log("Installing platform-specific dependencies...")
   await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
   await $`bun install --os="*" --cpu="*" @opentui/solid@${pkg.dependencies["@opentui/solid"]}`
-  console.log("")
 }
-
 for (const item of targets) {
   const name = [
     pkg.name,
-    // changing to windows instead of win32 for npm compatibility
     item.os === "win32" ? "windows" : item.os,
     item.arch,
     item.avx2 === false ? "baseline" : undefined,
@@ -107,17 +113,14 @@ for (const item of targets) {
   ]
     .filter(Boolean)
     .join("-")
-  
-  console.log(`Building ${name}...`)
+  console.log(`building ${name}`)
   await $`mkdir -p dist/${name}/bin`
 
   const parserWorker = fs.realpathSync(path.resolve(dir, "./node_modules/@opentui/core/parser.worker.js"))
 
-  // Use platform-specific bunfs root path based on target OS
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
   const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
-  // Windows executables need .exe extension
   const exeExtension = item.os === "win32" ? ".exe" : ""
 
   const result = await Bun.build({
@@ -135,7 +138,7 @@ for (const item of targets) {
     },
     entrypoints: ["./src/index.tsx", parserWorker],
     define: {
-      OPENDOCKER_VERSION: `'${pkg.version}'`,
+      OPENDOCKER_VERSION: `'${Script.version}'`,
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
     },
   })
@@ -152,7 +155,7 @@ for (const item of targets) {
     JSON.stringify(
       {
         name,
-        version: pkg.version,
+        version: Script.version,
         os: [item.os],
         cpu: [item.arch],
       },
@@ -160,12 +163,19 @@ for (const item of targets) {
       2,
     ),
   )
-  binaries[name] = pkg.version
+  binaries[name] = Script.version
   console.log(`✓ ${name} built successfully`)
 }
 
-console.log("")
-console.log("Build complete!")
-console.log(`Built ${Object.keys(binaries).length} platform(s)`)
+if (Script.release) {
+  for (const key of Object.keys(binaries)) {
+    if (key.includes("linux")) {
+      await $`tar -czf ../../${key}.tar.gz *`.cwd(`dist/${key}/bin`)
+    } else {
+      await $`zip -r ../../${key}.zip *`.cwd(`dist/${key}/bin`)
+    }
+  }
+  await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber --repo ${process.env.GH_REPO}`
+}
 
 export { binaries }
