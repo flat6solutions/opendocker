@@ -83,6 +83,13 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
+      - name: Setup git committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          opendocker-app-id: ${{ secrets.OPENDOCKER_APP_ID }}
+          opendocker-app-secret: ${{ secrets.OPENDOCKER_APP_SECRET }}
+
       - name: Build
         id: build
         run: |
@@ -91,6 +98,7 @@ jobs:
           OPENDOCKER_VERSION: ${{ needs.version.outputs.version }}
           OPENDOCKER_RELEASE: "true"
           GH_REPO: ${{ needs.version.outputs.repo }}
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
 
       - uses: actions/upload-artifact@v4
         with:
