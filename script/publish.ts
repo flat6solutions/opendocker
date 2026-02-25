@@ -6,7 +6,6 @@ import { Script } from "../packages/script/src/index.ts"
 
 async function main() {
   console.log("=== publish ===\n")
-  const tag = `v${Script.version}`
 
 
   console.log("=== build ===\n")
@@ -40,32 +39,16 @@ async function main() {
   }
 
 
-  console.log("\n=== git tag ===\n")
-  await $`git fetch --force --tags`
-  const remoteTag = await $`git ls-remote --tags origin ${tag}`.text()
-  if (!remoteTag.trim()) {
-    const localTag = await $`git tag --list ${tag}`.text()
-    if (!localTag.trim()) {
-      await $`git tag ${tag}`
-      console.log(`Created ${tag}`)
-    }
-    await $`git push origin ${tag}`
-    console.log(`Pushed ${tag}`)
-  } else {
-    console.log(`${tag} already on origin`)
-  }
-
-
   console.log("\n=== github release ===\n")
   const archives = await Array.fromAsync(
     new Bun.Glob("*.{tar.gz,zip}").scan({ cwd: distDir, absolute: true })
   )
-  await $`gh release upload ${tag} --clobber ${archives}`
-  await $`gh release edit ${tag} --draft=false`
+  await $`gh release upload v${Script.version} --clobber ${archives}`
+  await $`gh release edit v${Script.version} --draft=false`
 
 
   console.log("\n=== done ===")
-  console.log(`Released ${tag}`)
+  console.log(`Released v${Script.version}`)
 }
 
 
