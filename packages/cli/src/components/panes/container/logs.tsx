@@ -96,7 +96,7 @@ export default function Logs() {
   })
 
   return (
-    <Pane width="100%" flexGrow={1}>
+    <Pane width="100%" flexGrow={1} height="100%">
       <box
         paddingLeft={1}
         paddingRight={1}
@@ -122,6 +122,11 @@ export default function Logs() {
                 fg={theme.textMuted}
               />
             </scrollbox>
+          </Match>
+          <Match when={app.activeContainer && logs().length === 0}>
+            <box height="100%" width="100%" paddingLeft={1} paddingRight={1}>
+              <text fg={theme.textMuted}>Logs will stream here when available</text>
+            </box>
           </Match>
           <Match when={!app.activeContainer && app.containers.length > 0}>
             <box height="100%" width="100%" paddingLeft={1} paddingRight={1}>
