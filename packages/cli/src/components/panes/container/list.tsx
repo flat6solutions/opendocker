@@ -24,13 +24,13 @@ export default function List() {
   const [active, setActive] = createSignal<boolean>(false)
   const maxStateLength = () => Math.max(...app.containers.map(c => c.state.length), 0)
   const theme = useTheme().theme
-  const [selected, setSelected] = createSignal(0)
 
   async function setup() {
     const c = await DockerV2.getContainers()
     app.setContainers(c)
-    if (!selected()) {
-      setSelected(0)
+    const activeId = validateActiveContainer(c, app.activeContainer)
+    if (activeId !== app.activeContainer) {
+      app.setActiveContainer(activeId)
     }
   }
 
@@ -45,6 +45,12 @@ export default function List() {
       clearInterval(intervalId)
     })
   })
+
+  function validateActiveContainer(containers: Array<Container>, activeId: string | null) {
+    if (!activeId) return containers[0]?.id
+    const exists = containers.find(c => c.id === activeId)
+    return exists ? activeId : containers[0]?.id
+  }
 
   function getSelectedIndex() {
     if (!app.activeContainer) {
