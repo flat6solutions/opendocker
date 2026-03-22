@@ -14,6 +14,9 @@ export default function LeftSidebar() {
   useKeyboard(key => {
     if (dialog.stack.length > 0) return
 
+    // Avoid triggering panes when filtering input is active
+    if (app.filtering) return;
+
     if (keybind.match("cycle_pane", key)) {
       switch (app.activePane) {
         case "containers":
