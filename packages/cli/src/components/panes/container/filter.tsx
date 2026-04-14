@@ -15,50 +15,38 @@ export default function Filter() {
 
   useKeyboard(key => {
     if (dialog.stack.length > 0) return
+    if (app.activePane !== "containers") return
+    if (key.name !== "f") return
+    if (!input || input.focused) return
 
-    if (key.name === "f") {
-      if (!input.focused) {
-        input.focus()
-        input.cursorOffset = input.plainText.length
-        key.preventDefault()
-        app.setActivePane("filter")
-        app.setFiltering(true)
-        return
-      }
-    }
+    input.focus()
+    input.cursorOffset = input.plainText.length
+    key.preventDefault()
+    app.startContainerFilter()
   })
 
   function submit(key: KeyEvent) {
     input.submit()
     input.blur()
     key.preventDefault()
-    app.setFiltering(false)
-
-    app.setActivePane("containers")
     if (app.activeContainer) {
-      app.setFilters({ [app.activeContainer]: value()})
+      app.setContainerFilter(app.activeContainer, value())
     }
-
-    return
+    app.stopContainerFilter()
   }
 
   function cancel(key: KeyEvent) {
     input.blur()
     key.preventDefault()
-    app.setFiltering(false)
-
-    app.setActivePane("containers")
-    return
+    app.stopContainerFilter()
   }
 
   createEffect(() => {
-    if (app.activeContainer) {
-      const filterValue = app.filters[app.activeContainer] || "" 
-      setValue(filterValue)
+    const filterValue = app.activeContainer ? app.filters[app.activeContainer] || "" : ""
+    setValue(filterValue)
 
-      if (input) {
-        input.setText(filterValue)
-      }
+    if (input) {
+      input.setText(filterValue)
     }
   })
 
@@ -66,7 +54,7 @@ export default function Filter() {
     <box
       border={["left"]}
       customBorderChars={SplitBorder.customBorderChars}
-      borderColor={app.activePane === "filter" ? theme.text : theme.border}
+      borderColor={app.filtering ? theme.text : theme.border}
       flexShrink={0}
     >
       <box backgroundColor={theme.backgroundPanel} flexDirection="row">
