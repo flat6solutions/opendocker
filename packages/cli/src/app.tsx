@@ -11,6 +11,7 @@ import { KeybindProvider, useKeybind } from "./context/keybind"
 import { ThemeProvider, useTheme } from "./context/theme"
 import { KVProvider } from "./context/kv"
 import { DialogProvider, useDialog } from "./ui/dialog"
+import ThemesDialog from "./components/dialogs/themes"
 
 export function tui() {
   return (
@@ -55,8 +56,8 @@ function App() {
       renderer?.toggleDebugOverlay()
     }
 
-    if (keybind.match("theme_mode_toggle", event)) {
-      theme.setMode(theme.mode() === "light" ? "dark" : "light")
+    if (keybind.match("theme_list", event)) {
+      dialog.replace(() => <ThemesDialog title="Themes" />)
     }
   })
 
