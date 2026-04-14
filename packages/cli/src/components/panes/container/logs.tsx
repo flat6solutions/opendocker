@@ -15,9 +15,17 @@ export default function Logs() {
   const [paused, setPaused] = createSignal<boolean>(false)
   const [scroll, setScroll] = createSignal<ScrollBoxRenderable>()
   const logSyntaxStyle = SyntaxStyle.create()
+  const activeFilter = () => {
+    const activeContainer = app.activeContainer
+    return activeContainer ? app.filters[activeContainer] || "" : ""
+  }
 
   useKeyboard(key => {
-    if (app.activePane !== "containers" && app.activePane !== "filter") {
+    if (app.activePane !== "containers") {
+      return
+    }
+
+    if (app.filtering) {
       return
     }
 
@@ -40,10 +48,11 @@ export default function Logs() {
   createEffect(() => {
     if (!app.activeContainer) {
       setLogs("")
+      setTempLogs("")
       return
     }
 
-    const filter = app.filters[app.activeContainer] || ""
+    const filter = activeFilter()
     const baseCommand = `docker logs --follow --tail 100 ${app.activeContainer}`
     const shellCommand = filter
       ? `${baseCommand} 2>&1 | grep --line-buffered "${filter}"`
@@ -91,6 +100,7 @@ export default function Logs() {
       abortController.abort()
       process.kill()
       setLogs("")
+      setTempLogs("")
       setPaused(false)
     })
   })
@@ -106,6 +116,11 @@ export default function Logs() {
         gap={1}
       >
         <Switch>
+          <Match when={app.activeContainer && activeFilter().length > 0 && logs().length === 0}>
+            <box height="100%" width="100%" paddingLeft={1} paddingRight={1}>
+              <text fg={theme.textMuted}>No matching logs for "{activeFilter()}"</text>
+            </box>
+          </Match>
           <Match when={app.activeContainer && logs().length > 0}>
             <scrollbox
               ref={(r: ScrollBoxRenderable) => setScroll(r)}
@@ -139,11 +154,6 @@ export default function Logs() {
           <Match when={!app.activeContainer && app.containers.length === 0}>
             <box height="100%" width="100%" paddingLeft={1} paddingRight={1}>
               <text fg={theme.textMuted}>No container selected</text>
-            </box>
-          </Match>
-          <Match when={app.activeContainer && app.filters[app.activeContainer] && logs().length === 0}>
-            <box height="100%" width="100%" paddingLeft={1} paddingRight={1}>
-              <text fg={theme.textMuted}>No matching logs for "{app.filters[app.activeContainer!]}"</text>
             </box>
           </Match>
         </Switch>

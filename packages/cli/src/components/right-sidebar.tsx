@@ -12,7 +12,7 @@ export default function RightSidebar() {
 
   return (
     <box flexDirection="column" gap={1} width="70%" height="100%">
-      <Show when={app.activePane === "containers" || app.activePane === "filter"}>
+      <Show when={app.activePane === "containers"}>
         <ContainerHeader />
         <ContainerLogs />
         <ContainerFilter />

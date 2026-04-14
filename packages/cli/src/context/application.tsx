@@ -4,6 +4,25 @@ import { createSimpleContext } from "./helper"
 import type { Docker } from "@/lib/docker"
 import { KeybindsConfig } from "@/util/config"
 
+const Pane = z.enum(["containers", "images", "volumes"])
+type Pane = z.infer<typeof Pane>
+
+const ContainerFocus = z.enum(["list", "filter"])
+
+const ActiveView = z.discriminatedUnion("pane", [
+  z.object({
+    pane: z.literal("containers"),
+    focus: ContainerFocus,
+  }),
+  z.object({
+    pane: z.literal("images"),
+  }),
+  z.object({
+    pane: z.literal("volumes"),
+  }),
+])
+type ActiveView = z.infer<typeof ActiveView>
+
 const Container = z.object({
   id: z.string().describe("Unique container identifier"),
   name: z.string().describe("Container name"),
@@ -37,21 +56,31 @@ type Config = {
   keybinds: KeybindsConfig,
 }
 
+function getViewForPane(pane: Pane): ActiveView {
+  switch (pane) {
+    case "containers":
+      return { pane, focus: "list" }
+    case "images":
+      return { pane }
+    case "volumes":
+      return { pane }
+  }
+}
+
 export const { use: useApplication, provider: ApplicationProvider } = createSimpleContext({
   name: "Application",
   init: () => {
     const [store, setStore] = createStore<{
-      containers: Container[],
-      images: Image[],
-      volumes: Volume[],
-      activeContainer: string | null,
-      activeImage: string | null,
-      activeVolume: string | null,
-      docker: Docker | null,
-      activePane: string,
-      filters: Record<string, string>,
-      filtering: boolean,
-      config: Config 
+      containers: Array<Container>
+      images: Array<Image>
+      volumes: Array<Volume>
+      activeContainer: string | null
+      activeImage: string | null
+      activeVolume: string | null
+      docker: Docker | null
+      activeView: ActiveView
+      filters: Record<string, string>
+      config: Config
     }>({
       containers: [],
       images: [],
@@ -60,9 +89,8 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       activeImage: null,
       activeVolume: null,
       docker: null,
-      activePane: "containers",
+      activeView: { pane: "containers", focus: "list" },
       filters: {},
-      filtering: false,
       config: {
         keybinds: KeybindsConfig.parse({}),
       },
@@ -76,21 +104,26 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       get activeImage() { return store.activeImage },
       get activeVolume() { return store.activeVolume },
       get docker() { return store.docker },
-      get activePane() { return store.activePane },
+      get activePane() { return store.activeView.pane },
       get filters() { return store.filters },
-      get filtering() { return store.filtering },
+      get filtering() {
+        return store.activeView.pane === "containers" && store.activeView.focus === "filter"
+      },
       get config() { return store.config },
 
-      setContainers: (v: Container[]) => setStore("containers", v),
-      setImages: (v: Image[]) => setStore("images", v),
-      setVolumes: (v: Volume[]) => setStore("volumes", v),
+      setContainers: (v: Array<Container>) => setStore("containers", v),
+      setImages: (v: Array<Image>) => setStore("images", v),
+      setVolumes: (v: Array<Volume>) => setStore("volumes", v),
       setActiveContainer: (v: string | null) => setStore("activeContainer", v),
       setActiveImage: (v: string | null) => setStore("activeImage", v),
       setActiveVolume: (v: string | null) => setStore("activeVolume", v),
       setDocker: (v: Docker | null) => setStore("docker", v),
-      setActivePane: (v: string) => setStore("activePane", v),
-      setFilters: (v: Record<string, string>) => setStore("filters", v),
-      setFiltering: (v: boolean) => setStore("filtering", v),
+      focusContainers: () => setStore("activeView", getViewForPane("containers")),
+      focusImages: () => setStore("activeView", getViewForPane("images")),
+      focusVolumes: () => setStore("activeView", getViewForPane("volumes")),
+      startContainerFilter: () => setStore("activeView", { pane: "containers", focus: "filter" }),
+      stopContainerFilter: () => setStore("activeView", { pane: "containers", focus: "list" }),
+      setContainerFilter: (id: string, value: string) => setStore("filters", id, value),
       setConfig: (v: Config) => setStore("config", v),
     }
   },

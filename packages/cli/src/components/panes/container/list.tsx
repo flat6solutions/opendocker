@@ -103,7 +103,7 @@ export default function List() {
   })
 
   createEffect(() => {
-    setActive(app.activePane === "containers" || app.activePane === "filter")
+    setActive(app.activePane === "containers")
   })
 
   return (
@@ -113,7 +113,7 @@ export default function List() {
       width="100%"
       flexGrow={active() ? 1 : 0}
       flexShrink={1}
-      borderColor={() => app.activePane === "containers" ? theme.border : undefined}
+      borderColor={() => !app.filtering ? theme.border : undefined}
       active={active()}
       subtitle={
         <box flexDirection="row" gap={1} alignItems="center">
