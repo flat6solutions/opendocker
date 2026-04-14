@@ -65,7 +65,6 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       filtering: false,
       config: {
         keybinds: KeybindsConfig.parse({}),
-        theme: "opencode",
       },
     })
 
