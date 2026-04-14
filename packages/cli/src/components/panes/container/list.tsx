@@ -113,7 +113,7 @@ export default function List() {
       width="100%"
       flexGrow={active() ? 1 : 0}
       flexShrink={1}
-      borderColor={() => !app.filtering ? theme.border : undefined}
+      borderColor={() => (active() && !app.filtering ? theme.border : theme.backgroundPanel)}
       active={active()}
       subtitle={
         <box flexDirection="row" gap={1} alignItems="center">
