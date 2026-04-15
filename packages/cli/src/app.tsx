@@ -1,5 +1,5 @@
-import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { Show, Switch, Match, createMemo, ErrorBoundary, onMount } from "solid-js"
+import { useKeyboard, useRenderer } from "@opentui/solid"
+import { ErrorBoundary, onMount } from "solid-js"
 import { ErrorComponent } from "@/components/error-component"
 import { BaseLayout } from "@/layouts/base-layout"
 import LeftSidebar from "@/components/left-sidebar"
@@ -12,7 +12,6 @@ import { ThemeProvider } from "@/context/theme"
 import { KVProvider } from "@/context/kv"
 import { DialogProvider, useDialog } from "@/ui/dialog"
 import ThemesDialog from "@/components/dialogs/themes"
-import RightSidebar from "@/components/right-sidebar"
 
 export function tui() {
   return (
@@ -43,13 +42,9 @@ function App() {
   const keybind = useKeybind()
   const dialog = useDialog()
 
-  const dimensions = useTerminalDimensions()
-  const wide = createMemo(() => dimensions().width > 120)
-
   useKeyboard(event => {
     if (app.filtering) return
     if (dialog.stack.length > 0) return
-    if (app.rightSidebarOpen) return
 
     if (keybind.match("app_exit", event)) {
       exit()
@@ -112,13 +107,6 @@ function App() {
     >
       <LeftSidebar />
       <Main />
-      <Show when={app.rightSidebarOpen}>
-        <Switch>
-          <Match when={wide()}>
-            <RightSidebar />
-          </Match>
-        </Switch>
-      </Show>
     </box>
   )
 }
