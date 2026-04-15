@@ -49,6 +49,7 @@ function App() {
   useKeyboard(event => {
     if (app.filtering) return
     if (dialog.stack.length > 0) return
+    if (app.rightSidebarOpen) return
 
     if (keybind.match("app_exit", event)) {
       exit()

@@ -66,6 +66,7 @@ export default function List() {
     if (app.filtering) return
     if (app.activePane !== "containers") return
     if (dialog.stack.length > 0) return
+    if (app.rightSidebarOpen) return
 
     if (keybind.match("up", key)) {
       const index = getSelectedIndex()

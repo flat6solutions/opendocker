@@ -69,6 +69,7 @@ export default function List() {
     useKeyboard(key => {
         if (app.filtering) return;
         if (app.activePane !== 'volumes') return;
+        if (app.rightSidebarOpen) return;
 
         if (keybind.match("up", key)) {
             const index = getSelectedIndex();

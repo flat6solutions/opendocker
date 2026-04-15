@@ -13,6 +13,7 @@ export default function LeftSidebar() {
 
   useKeyboard(key => {
     if (dialog.stack.length > 0) return
+    if (app.rightSidebarOpen) return
 
     if (keybind.match("focus_containers", key)) {
       app.focusContainers()

@@ -15,6 +15,7 @@ export default function Filter() {
 
   useKeyboard(key => {
     if (dialog.stack.length > 0) return
+    if (app.rightSidebarOpen) return
 
     if (key.name === "f") {
       if (!input.focused) {
