@@ -77,6 +77,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       activeContainer: string | null
       activeImage: string | null
       activeVolume: string | null
+      rightSidebarOpen: boolean
       docker: Docker | null
       activeView: ActiveView
       filters: Record<string, string>
@@ -88,6 +89,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       activeContainer: null,
       activeImage: null,
       activeVolume: null,
+      rightSidebarOpen: false,
       docker: null,
       activeView: { pane: "containers", focus: "list" },
       filters: {},
@@ -103,6 +105,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       get activeContainer() { return store.activeContainer },
       get activeImage() { return store.activeImage },
       get activeVolume() { return store.activeVolume },
+      get rightSidebarOpen() { return store.rightSidebarOpen },
       get docker() { return store.docker },
       get activePane() { return store.activeView.pane },
       get filters() { return store.filters },
@@ -117,6 +120,8 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       setActiveContainer: (v: string | null) => setStore("activeContainer", v),
       setActiveImage: (v: string | null) => setStore("activeImage", v),
       setActiveVolume: (v: string | null) => setStore("activeVolume", v),
+      setRightSidebarOpen: (v: boolean) => setStore("rightSidebarOpen", v),
+      toggleRightSidebar: () => setStore("rightSidebarOpen", open => !open),
       setDocker: (v: Docker | null) => setStore("docker", v),
       focusContainers: () => setStore("activeView", getViewForPane("containers")),
       focusImages: () => setStore("activeView", getViewForPane("images")),

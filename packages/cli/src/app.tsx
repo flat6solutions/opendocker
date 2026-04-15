@@ -1,17 +1,18 @@
-import { useKeyboard, useRenderer } from "@opentui/solid"
-import { ErrorBoundary, onMount } from "solid-js"
+import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
+import { Show, Switch, Match, createMemo, ErrorBoundary, onMount } from "solid-js"
 import { ErrorComponent } from "@/components/error-component"
 import { BaseLayout } from "@/layouts/base-layout"
-import LeftSidebar from "./components/left-sidebar"
-import RightSidebar from "./components/right-sidebar"
-import { ToastProvider, useToast } from "./ui/toast"
-import { Clipboard } from "./util/clipboard"
-import { ApplicationProvider, useApplication } from "./context/application"
-import { KeybindProvider, useKeybind } from "./context/keybind"
-import { ThemeProvider, useTheme } from "./context/theme"
-import { KVProvider } from "./context/kv"
-import { DialogProvider, useDialog } from "./ui/dialog"
-import ThemesDialog from "./components/dialogs/themes"
+import LeftSidebar from "@/components/left-sidebar"
+import Main from "@/components/main"
+import { ToastProvider, useToast } from "@/ui/toast"
+import { Clipboard } from "@/util/clipboard"
+import { ApplicationProvider, useApplication } from "@/context/application"
+import { KeybindProvider, useKeybind } from "@/context/keybind"
+import { ThemeProvider } from "@/context/theme"
+import { KVProvider } from "@/context/kv"
+import { DialogProvider, useDialog } from "@/ui/dialog"
+import ThemesDialog from "@/components/dialogs/themes"
+import RightSidebar from "@/components/right-sidebar"
 
 export function tui() {
   return (
@@ -40,8 +41,10 @@ function App() {
   const toast = useToast()
   const app = useApplication()
   const keybind = useKeybind()
-  const theme = useTheme()
   const dialog = useDialog()
+
+  const dimensions = useTerminalDimensions()
+  const wide = createMemo(() => dimensions().width > 120)
 
   useKeyboard(event => {
     if (app.filtering) return
@@ -58,6 +61,10 @@ function App() {
 
     if (keybind.match("theme_list", event)) {
       dialog.replace(() => <ThemesDialog title="Themes" />)
+    }
+
+    if (keybind.match("sidebar_toggle", event)) {
+      app.toggleRightSidebar()
     }
   })
 
@@ -103,7 +110,14 @@ function App() {
       }}
     >
       <LeftSidebar />
-      <RightSidebar />
+      <Main />
+      <Show when={app.rightSidebarOpen}>
+        <Switch>
+          <Match when={wide()}>
+            <RightSidebar />
+          </Match>
+        </Switch>
+      </Show>
     </box>
   )
 }

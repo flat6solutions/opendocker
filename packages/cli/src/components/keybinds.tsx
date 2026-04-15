@@ -12,10 +12,8 @@ export default function Keybinds() {
   const dialog = useDialog()
 
   const config: Array<{ label: string; key: keyof KeybindsConfig }> = [
-    { label: "stop", key: "container_stop" },
-    { label: "pause", key: "container_pause" },
-    { label: "restart", key: "container_restart" },
-    { label: "exec cmd", key: "container_exec_cmd" },
+    { label: "sidebar", key: "sidebar_toggle" },
+    { label: "themes", key: "theme_list" },
   ]
 
   useKeyboard(key => {
@@ -35,6 +33,7 @@ export default function Keybinds() {
     }
 
     if (keybind.match("container_restart", key)) {
+
     }
   })
 
@@ -43,12 +42,11 @@ export default function Keybinds() {
       width="100%"
       height="auto"
       flexDirection="row"
-      justifyContent="flex-start"
+      justifyContent="flex-end"
       alignItems="center"
       gap={2}
       paddingLeft={1}
       paddingRight={1}
-      paddingBottom={1}
     >
       <For each={config}>
         {(item) => {
