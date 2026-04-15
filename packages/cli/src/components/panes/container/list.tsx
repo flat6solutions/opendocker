@@ -17,10 +17,12 @@ import { getColorForContainerState } from "@/util/colors"
 import { useTheme } from "@/context/theme"
 import { useKeybind } from "@/context/keybind"
 import { DockerV2 } from "@/lib/docker-v2"
+import { useDialog } from "@/ui/dialog"
 
 export default function List() {
   const keybind = useKeybind()
   const app = useApplication()
+  const dialog = useDialog()
   const [active, setActive] = createSignal<boolean>(false)
   const maxStateLength = () => Math.max(...app.containers.map(c => c.state.length), 0)
   const theme = useTheme().theme
@@ -63,6 +65,7 @@ export default function List() {
   useKeyboard(key => {
     if (app.filtering) return
     if (app.activePane !== "containers") return
+    if (dialog.stack.length > 0) return
 
     if (keybind.match("up", key)) {
       const index = getSelectedIndex()
