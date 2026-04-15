@@ -21,8 +21,7 @@ export default function Filter() {
         input.focus()
         input.cursorOffset = input.plainText.length
         key.preventDefault()
-        app.setActivePane("filter")
-        app.setFiltering(true)
+        app.startContainerFilter()
         return
       }
     }
@@ -32,11 +31,10 @@ export default function Filter() {
     input.submit()
     input.blur()
     key.preventDefault()
-    app.setFiltering(false)
+    app.stopContainerFilter()
 
-    app.setActivePane("containers")
     if (app.activeContainer) {
-      app.setFilters({ [app.activeContainer]: value()})
+      app.setContainerFilter(app.activeContainer, value())
     }
 
     return
@@ -45,9 +43,7 @@ export default function Filter() {
   function cancel(key: KeyEvent) {
     input.blur()
     key.preventDefault()
-    app.setFiltering(false)
-
-    app.setActivePane("containers")
+    app.stopContainerFilter()
     return
   }
 
@@ -66,7 +62,7 @@ export default function Filter() {
     <box
       border={["left"]}
       customBorderChars={SplitBorder.customBorderChars}
-      borderColor={app.activePane === "filter" ? theme.border : theme.backgroundPanel}
+      borderColor={app.filtering ? theme.border : theme.backgroundPanel}
       flexShrink={0}
     >
       <box backgroundColor={theme.backgroundPanel} flexDirection="row">
