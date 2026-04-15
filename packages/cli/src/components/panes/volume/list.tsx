@@ -16,11 +16,13 @@ import { useApplication } from '@/context/application';
 import type { Volume } from '@/context/application';
 import { Spinner } from '@/components/spinner';
 import { useKeybind } from '@/context/keybind';
+import { useDialog } from '@/ui/dialog';
 
 export default function List() {
     const keybind = useKeybind();
     const app = useApplication();
     const theme = useTheme().theme;
+    const dialog = useDialog();
     const [loaded, setLoaded] = createSignal<boolean>(false);
     const [active, setActive] = createSignal<boolean>(false);
     const maxDriverLength = () => Math.max(...app.volumes.map(v => v.driver.length), 0);
@@ -69,6 +71,7 @@ export default function List() {
     useKeyboard(key => {
         if (app.filtering) return;
         if (app.activePane !== 'volumes') return;
+        if (dialog.stack.length > 0) return;
         if (app.rightSidebarOpen) return;
 
         if (keybind.match("up", key)) {
