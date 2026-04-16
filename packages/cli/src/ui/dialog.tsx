@@ -132,15 +132,19 @@ export function DialogProvider(props: ParentProps) {
   return (
     <ctx.Provider value={value}>
       {props.children}
-      <box
-        position="absolute"
-      >
-        <Show when={value.stack.length}>
+      <Show when={value.stack.length}>
+        <box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+        >
           <Dialog onClose={() => value.clear()} size={value.size}>
             {value.stack.at(-1)!.element}
           </Dialog>
-        </Show>
-      </box>
+        </box>
+      </Show>
     </ctx.Provider>
   )
 }

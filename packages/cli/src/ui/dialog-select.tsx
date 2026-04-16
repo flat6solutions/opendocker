@@ -371,9 +371,11 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
               {(item) => (
                 <text>
                   <span style={{ fg: theme.text }}>
-                    <b>{item.title}</b>{" "}
+                    {Keybind.toString(item.keybind)}{" "}
                   </span>
-                  <span style={{ fg: theme.textMuted }}>{Keybind.toString(item.keybind)}</span>
+                  <span style={{ fg: theme.textMuted }}>
+                    {item.title}
+                  </span>
                 </text>
               )}
             </For>
@@ -383,9 +385,11 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
               {(item) => (
                 <text>
                   <span style={{ fg: theme.text }}>
-                    <b>{item.title}</b>{" "}
+                    {Keybind.toString(item.keybind)}{" "}
                   </span>
-                  <span style={{ fg: theme.textMuted }}>{Keybind.toString(item.keybind)}</span>
+                  <span style={{ fg: theme.textMuted }}>
+                    {item.title}
+                  </span>
                 </text>
               )}
             </For>

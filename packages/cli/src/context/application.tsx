@@ -120,7 +120,6 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       setActiveContainer: (v: string | null) => setStore("activeContainer", v),
       setActiveImage: (v: string | null) => setStore("activeImage", v),
       setActiveVolume: (v: string | null) => setStore("activeVolume", v),
-      setRightSidebarOpen: (v: boolean) => setStore("rightSidebarOpen", v),
       toggleRightSidebar: () => setStore("rightSidebarOpen", open => !open),
       setDocker: (v: Docker | null) => setStore("docker", v),
       focusContainers: () => setStore("activeView", getViewForPane("containers")),

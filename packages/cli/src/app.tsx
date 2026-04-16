@@ -59,7 +59,10 @@ function App() {
       dialog.replace(() => <ThemesDialog title="Themes" />)
     }
 
-    if (keybind.match("sidebar_toggle", event)) {
+    if (
+      keybind.match("sidebar_toggle", event)
+      || (app.rightSidebarOpen && event.name === "escape")
+    ) {
       app.toggleRightSidebar()
     }
   })
