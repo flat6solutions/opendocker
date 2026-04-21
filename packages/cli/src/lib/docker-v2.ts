@@ -229,4 +229,12 @@ export namespace DockerV2 {
         return a.name.localeCompare(b.name)
       })
   }
+
+  export async function stopContainer(container: string): Promise<void> {
+    await Bun.$`docker stop ${container}`.nothrow().text()
+  }
+
+  export async function startContainer(container: string): Promise<void> {
+    await Bun.$`docker start ${container}`.nothrow().text()
+  }
 }
