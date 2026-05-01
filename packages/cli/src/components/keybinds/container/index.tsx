@@ -1,6 +1,5 @@
-import { createMemo, createSignal, createEffect, For } from "solid-js"
+import { Switch, Match, createMemo, createSignal, createEffect, For } from "solid-js"
 import { useKeybind } from "@/context/keybind"
-import { KeybindsConfig } from "@/util/config"
 import { useTheme } from "@/context/theme"
 import { useKeyboard } from "@opentui/solid"
 import { useDialog } from "@/ui/dialog"
@@ -8,9 +7,7 @@ import { useApplication } from "@/context/application"
 import type { Container } from "@/context/application"
 import { DockerV2 } from "@/lib/docker-v2"
 import { useToast } from "@/ui/toast"
-
-type Config = Array<ConfigItem>
-type ConfigItem = { label: string; key: keyof KeybindsConfig }
+import type { Config, ConfigItem } from "@/components/keybinds"
 
 export default function ContainerKeybinds() {
   const theme = useTheme().theme
@@ -31,13 +28,13 @@ export default function ContainerKeybinds() {
   })
 
   function getCmdForState(container: Container | undefined): "start" | "stop" | null {
-    switch (container?.state) {
+    if (!container) return null
+    switch (container.state) {
       case "created":
       case "restarting":
       case "running":
         return "stop"
-      case "paused":
-      case "exited":
+      case "paused": case "exited":
       case "dead":
         return "start"
       default:
@@ -75,17 +72,22 @@ export default function ContainerKeybinds() {
   })
 
   return (
-    <>
-      <For each={keybinds()}>
-        {(item: ConfigItem) => {
-          return (
-            <box flexDirection="row" gap={1}>
-              <text fg={theme.text}>{keybind.print(item.key)}</text>
-              <text fg={theme.textMuted}>{item.label}</text>
-            </box>
-          )
-        }}
-      </For>
-    </>
+    <Switch>
+      <Match when={!selected()}>
+        <></>
+      </Match>
+      <Match when={selected()}>
+        <For each={keybinds()}>
+          {(item: ConfigItem) => {
+            return (
+              <box flexDirection="row" gap={1}>
+                <text fg={theme.text}>{keybind.print(item.key)}</text>
+                <text fg={theme.textMuted}>{item.label}</text>
+              </box>
+            )
+          }}
+        </For>
+      </Match>
+    </Switch>
   )
 }

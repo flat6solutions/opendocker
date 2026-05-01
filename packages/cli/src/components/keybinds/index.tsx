@@ -5,8 +5,8 @@ import { useTheme } from "@/context/theme"
 import { useApplication } from "@/context/application"
 import ContainerKeybinds from "./container"
 
-type Config = Array<ConfigItem>
-type ConfigItem = { label: string; key: keyof KeybindsConfig }
+export type Config = Array<ConfigItem>
+export type ConfigItem = { label: string; key: keyof KeybindsConfig }
 
 export default function Keybinds() {
   const theme = useTheme().theme
